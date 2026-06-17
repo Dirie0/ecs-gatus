@@ -15,10 +15,9 @@ resource "aws_internet_gateway" "main_igw" {
 resource "aws_subnet" "public" {
   for_each = var.public_subnet_config
 
-  vpc_id            = aws_vpc.main_vpc.id
-  cidr_block        = each.value.cidr_block
-  availability_zone = each.value.az
-
+  vpc_id                  = aws_vpc.main_vpc.id
+  cidr_block              = each.value.cidr_block
+  availability_zone       = each.value.az
   map_public_ip_on_launch = true
 
   tags = {
@@ -39,25 +38,28 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_eip" "nat" {
+  for_each = aws_subnet.public
+
   domain = "vpc"
 
   depends_on = [aws_internet_gateway.main_igw]
 
   tags = {
-    Name = "${var.vpc_config.name}-nat-eip"
+    Name = "${var.vpc_config.name}-nat-eip-${each.key}"
   }
 }
 
-resource "aws_nat_gateway" "nat_gateway" {
-  allocation_id = aws_eip.nat.id
 
-  # single NAT (learning-friendly, deterministic)
-  subnet_id = aws_subnet.public["public_a"].id
+resource "aws_nat_gateway" "nat_gateway" {
+  for_each = aws_subnet.public
+
+  allocation_id = aws_eip.nat[each.key].id
+  subnet_id     = each.value.id
 
   depends_on = [aws_internet_gateway.main_igw]
 
   tags = {
-    Name = "${var.vpc_config.name}-nat"
+    Name = "${var.vpc_config.name}-nat-${each.key}"
   }
 }
 
@@ -81,16 +83,24 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+#
+# PRIVATE ROUTE TABLES (one per private subnet / AZ)
+#
 resource "aws_route_table" "private" {
+  for_each = aws_subnet.private
+
   vpc_id = aws_vpc.main_vpc.id
 
   route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat_gateway.id
+    cidr_block = "0.0.0.0/0"
+
+    nat_gateway_id = aws_nat_gateway.nat_gateway[
+      replace(each.key, "private", "public")
+    ].id
   }
 
   tags = {
-    Name = "${var.vpc_config.name}-private-rt"
+    Name = "${var.vpc_config.name}-private-rt-${each.key}"
   }
 }
 
@@ -98,6 +108,5 @@ resource "aws_route_table_association" "private" {
   for_each = aws_subnet.private
 
   subnet_id      = each.value.id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private[each.key].id
 }
-
