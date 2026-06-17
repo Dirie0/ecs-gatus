@@ -17,3 +17,11 @@ output "security_group_alb_id" {
 output "security_group_ecs_id" {
   value = module.security_groups.security_group_ecs_id
 }
+
+output "app_log_group" {
+  value = module.cloudwatch.app_log_group
+}
+
+output "monitoring_log_group" {
+  value = module.cloudwatch.monitoring_log_group 
+}

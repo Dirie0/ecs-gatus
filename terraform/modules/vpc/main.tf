@@ -83,9 +83,6 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-#
-# PRIVATE ROUTE TABLES (one per private subnet / AZ)
-#
 resource "aws_route_table" "private" {
   for_each = aws_subnet.private
 
