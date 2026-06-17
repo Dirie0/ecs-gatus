@@ -1,0 +1,103 @@
+resource "aws_vpc" "main_vpc" {
+  cidr_block           = var.vpc_config.cidr_block
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
+  tags = {
+    Name = var.vpc_config.name
+  }
+}
+
+resource "aws_internet_gateway" "main_igw" {
+  vpc_id = aws_vpc.main_vpc.id
+}
+
+resource "aws_subnet" "public" {
+  for_each = var.public_subnet_config
+
+  vpc_id            = aws_vpc.main_vpc.id
+  cidr_block        = each.value.cidr_block
+  availability_zone = each.value.az
+
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "${var.vpc_config.name}-public-${each.key}"
+  }
+}
+
+resource "aws_subnet" "private" {
+  for_each = var.private_subnet_config
+
+  vpc_id            = aws_vpc.main_vpc.id
+  cidr_block        = each.value.cidr_block
+  availability_zone = each.value.az
+
+  tags = {
+    Name = "${var.vpc_config.name}-private-${each.key}"
+  }
+}
+
+resource "aws_eip" "nat" {
+  domain = "vpc"
+
+  depends_on = [aws_internet_gateway.main_igw]
+
+  tags = {
+    Name = "${var.vpc_config.name}-nat-eip"
+  }
+}
+
+resource "aws_nat_gateway" "nat_gateway" {
+  allocation_id = aws_eip.nat.id
+
+  # single NAT (learning-friendly, deterministic)
+  subnet_id = aws_subnet.public["public_a"].id
+
+  depends_on = [aws_internet_gateway.main_igw]
+
+  tags = {
+    Name = "${var.vpc_config.name}-nat"
+  }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main_igw.id
+  }
+
+  tags = {
+    Name = "${var.vpc_config.name}-public-rt"
+  }
+}
+
+resource "aws_route_table_association" "public" {
+  for_each = aws_subnet.public
+
+  subnet_id      = each.value.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat_gateway.id
+  }
+
+  tags = {
+    Name = "${var.vpc_config.name}-private-rt"
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  for_each = aws_subnet.private
+
+  subnet_id      = each.value.id
+  route_table_id = aws_route_table.private.id
+}
+

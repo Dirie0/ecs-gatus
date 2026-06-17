@@ -1,0 +1,27 @@
+module "vpc" {
+  source = "./modules/vpc"
+
+  vpc_config           = var.vpc_config
+  public_subnet_config = var.public_subnet_config
+  private_subnet_config = var.private_subnet_config
+
+  project_name = var.project_name
+  environment  = var.environment
+}
+
+module "iam" {
+  source = "./modules/iam"
+
+  project_name = var.project_name
+  environment  = var.environment
+}
+
+module "ecr" {
+  source = "./modules/ecr"
+
+  project_name = var.project_name
+  environment  = var.environment
+  repository_name = var.repository_name
+}
+
+
