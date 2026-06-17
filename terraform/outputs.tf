@@ -9,3 +9,11 @@ output "public_subnet_ids" {
 output "private_subnet_ids" {
   value = module.vpc.private_subnet_ids
 }
+
+output "security_group_alb_id" {
+  value = module.security_groups.security_group_alb_id
+}
+
+output "security_group_ecs_id" {
+  value = module.security_groups.security_group_ecs_id
+}
