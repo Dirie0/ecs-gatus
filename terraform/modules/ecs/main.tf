@@ -1,3 +1,4 @@
+#cluster
 resource "aws_ecs_cluster" "ecs_gatus_cluster" {
   name = "ecs_gatus_cluster"
 
@@ -9,7 +10,7 @@ resource "aws_ecs_cluster" "ecs_gatus_cluster" {
 }
 
 
-
+#ecs task definition
 resource "aws_ecs_task_definition" "ecs_gatus_task" {
   family = "${var.project_name}-task"
   execution_role_arn = var.ecs_execution_role_arn
@@ -36,6 +37,7 @@ resource "aws_ecs_task_definition" "ecs_gatus_task" {
   }
 }
 
+#ecs service
 resource "aws_ecs_service" "ecs_gatus_service" {
   name            = "${var.project_name}-service"
   cluster         = aws_ecs_cluster.ecs_gatus_cluster.id

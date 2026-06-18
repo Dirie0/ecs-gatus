@@ -66,3 +66,12 @@ module ecs {
   app_image = var.app_image
   log_group = module.cloudwatch.app_log_group
 }
+
+
+
+module route_53 {
+  source = "./modules/route_53"
+  domain_name = var.domain_name
+  aws_alb_zone_id = module.alb.alb_zone_id
+  aws_alb_dns_name = module.alb.alb_dns_name
+}
