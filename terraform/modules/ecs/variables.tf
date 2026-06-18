@@ -27,7 +27,7 @@ variable "aws_region" {
   type = string
 }
 
-variable "ecs_task_execution_role_arn" {
+variable "ecs_execution_role_arn" {
   type = string
 }
 
@@ -43,5 +43,9 @@ variable "app_count" {
 }
 
 variable "target_group_arn" {
+  type = string
+}
+
+variable "app_image" {
   type = string
 }

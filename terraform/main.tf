@@ -47,3 +47,21 @@ module alb {
   vpc_id = module.vpc.vpc_id
 }
 
+
+module ecs {
+  source = "./modules/ecs"
+
+  project_name = var.project_name
+  environment  = var.environment
+  task_cpu     = var.task_cpu
+  task_memory  = var.task_memory
+  app_port     = var.app_port
+  ecr_repository_url = module.ecr.repository_url
+  aws_region   = var.aws_region
+  ecs_execution_role_arn = module.iam.ecs_execution_role_arn
+  private_subnet_ids = module.vpc.private_subnet_ids
+  ecs_security_group_id = module.security_groups.security_group_ecs_id
+  app_count    = var.app_count
+  target_group_arn = module.alb.target_group_arn
+  app_image = var.app_image
+}

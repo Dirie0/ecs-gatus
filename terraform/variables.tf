@@ -37,3 +37,27 @@ variable "private_subnet_config" {
     az         = string
   }))
 }
+
+variable "task_cpu" {
+  type = number
+}
+
+variable "task_memory" {
+  type = number
+}
+ 
+variable "app_port"{
+  type = number
+}
+
+variable "app_count" {
+  type = number
+}
+
+variable "ecr_repository_url" {
+  type = string
+}
+
+variable "app_image" {
+  type = string
+}

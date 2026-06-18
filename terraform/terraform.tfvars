@@ -33,3 +33,15 @@ private_subnet_config = {
   }
 }
 
+
+task_cpu = 256
+
+task_memory = 512
+
+app_port = 8080
+
+app_count = 1
+
+ecr_repository_url = "930067561901.dkr.ecr.eu-west-1.amazonaws.com/ecs-gatus-dev"
+
+app_image = "930067561901.dkr.ecr.eu-west-1.amazonaws.com/ecs-gatus-dev:latest"
