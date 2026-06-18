@@ -49,3 +49,7 @@ variable "target_group_arn" {
 variable "app_image" {
   type = string
 }
+
+variable "log_group" {
+  type = string
+}

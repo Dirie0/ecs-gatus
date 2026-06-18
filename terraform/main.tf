@@ -64,4 +64,5 @@ module ecs {
   app_count    = var.app_count
   target_group_arn = module.alb.target_group_arn
   app_image = var.app_image
+  log_group = module.cloudwatch.app_log_group
 }

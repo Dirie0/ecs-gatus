@@ -27,6 +27,7 @@ resource "aws_ecs_task_definition" "ecs_gatus_task" {
       task_memory       = var.task_memory
       app_image = var.app_image
       aws_region = var.aws_region
+      log_group= var.log_group
     }
   )
   runtime_platform {
@@ -50,7 +51,7 @@ resource "aws_ecs_service" "ecs_gatus_service" {
 
   load_balancer {
     target_group_arn = var.target_group_arn
-    container_name   = "${var.project_name}-container"
+    container_name   = "ecs-gatus-container"
     container_port   = var.app_port
   }
  depends_on = [  ]
