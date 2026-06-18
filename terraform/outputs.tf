@@ -25,3 +25,8 @@ output "app_log_group" {
 output "monitoring_log_group" {
   value = module.cloudwatch.monitoring_log_group 
 }
+
+
+output "alb_target_group_arn" {
+  value = module.alb.target_group_arn
+}

@@ -36,3 +36,14 @@ module "cloudwatch" {
   project_name = var.project_name
   environment  = var.environment
 }
+
+module alb {
+  source = "./modules/alb"
+
+  project_name = var.project_name
+  environment  = var.environment
+  public_subnet_ids = module.vpc.public_subnet_ids
+  alb_security_group_id = module.security_groups.security_group_alb_id
+  vpc_id = module.vpc.vpc_id
+}
+
