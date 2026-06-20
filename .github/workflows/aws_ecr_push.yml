@@ -1,21 +1,13 @@
 name: Deploy to Amazon ECS
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Environment to deploy"
-        type: choice
-        options: [dev, test, prod]
-        default: dev
+  push:
+    branches: [ "main" ]
 
 env:
-  environment: ${{inputs.environment}}
-
-env:
-  AWS_REGION: eu-west-1                  
-  ECR_REPOSITORY: ecr_repository_gatus          
-
+  AWS_REGION: eu-west-1                   # set this to your preferred AWS region, e.g. us-west-1
+  ECR_REPOSITORY: ecr_repository_gatus           # set this to your Amazon ECR repository name
+  
 permissions:
   contents: read
 
@@ -44,7 +36,6 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        # Build a docker container and push it to ECR so that it can be deployed to ECS.
         cd gatus 
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
