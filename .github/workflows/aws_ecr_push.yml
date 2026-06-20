@@ -9,13 +9,14 @@ env:
   ECR_REPOSITORY: ecr_repository_gatus           # set this to your Amazon ECR repository name
   
 permissions:
+  id-token: write
   contents: read
 
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: production
+    environment: dev 
 
     steps:
     - name: Checkout
