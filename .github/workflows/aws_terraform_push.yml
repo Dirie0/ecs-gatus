@@ -1,7 +1,7 @@
 name: deploy Terraform
 
 on: Workflow Dispatch
-  inputs:
+inputs:
     environment:
       description: 'The environment to deploy to'
       required: true
