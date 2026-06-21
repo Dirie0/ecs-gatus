@@ -1,68 +1,66 @@
-name: deploy Terraform
+name: Deploy Terraform
 
-on: Workflow Dispatch
-inputs:
-    environment:
-      description: 'The environment to deploy to'
-      required: true
-      default: 'dev'
-      type: choice
-      options:
-        - dev
-        - staging
-        - prod
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The environment to deploy to"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
 
-env: 
-  environemnt: ${{inputs.environemnt}}
-jobs: 
+env:
+  ENVIRONMENT: ${{ inputs.environment }}
+
+jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: ${{inputs.environemnt}}
+
+    environment: ${{ inputs.environment }}
+
     permissions:
       id-token: write
       contents: read
       issues: write
+
     defaults:
-     run:
-     working-directory: terraform
-    
-    steps: 
-    name: Checkout
-      -uses: actions/checkout@v4
-    name: Terraform Setup
-      -uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.8.5
-    name: Configure AWS Credentials
-      -uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
-        aws-region: eu-west-1   
-    name: Run Terraform Init
-      -run:|
-        cd terraform
-        terraform init \
-         -backend-config="bucket=${{ vars.TF_S3_BACKEND_BUCKET_NAME }}" \
-         -backend-config="key=${{ inputs.environment }}/terraform.tfstate" \
-         -backend-config="region=${{ vars.AWS_REGION }}"
+      run:
+        working-directory: terraform
 
-    name: Run Terraform plan
-      -run: terraform plan -var-file="${{ inputs.environment }}_terraform.tfvars" -out=tfplan
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    name: Run Manual Approval
-     with:
-          secret: ${{ github.TOKEN }}
-          approvers: ${{ github.actor }}
-        minimum-approvals: 1
-          issue-title: "Deploying to ${{ inputs.environment }} environment"
-          issue-body: "Please review the Terraform plan and approve this deployment to ${{ inputs.environment }}."
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
 
-  name: Run Terraform Apply
-      -if: ${{ github.event.action == 'submitted' && github.event.inputs.approval == 'approved' }}
-      -run: terraform apply tfplan
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_S3_BACKEND_BUCKET_NAME }}" \
+            -backend-config="key=${{ inputs.environment }}/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}"
+
+      - name: Terraform Plan
+        run: |
+          terraform plan \
+            -var-file="${{ inputs.environment }}.tfvars" \
+            -out=tfplan
 
 
 
-
-
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
