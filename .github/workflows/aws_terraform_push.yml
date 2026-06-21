@@ -15,7 +15,7 @@ on:
 
 env:
   ENVIRONMENT: ${{ inputs.environment }}
-  AWS_REGION: eu-west-1
+  AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
   deploy:
@@ -46,14 +46,14 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terraform Init
         run: |
           terraform init \
-            -backend-config="bucket=${{ vars.TF_S3_BACKEND_BUCKET_NAME }}" \
+            -backend-config="bucket=${{ secrets.TF_S3_BACKEND_BUCKET_NAME }}" \
             -backend-config="key=${{ inputs.environment }}/terraform.tfstate" \
-            -backend-config="region=${{ env.AWS_REGION }}"
+            -backend-config="region=${{ secrets.AWS_REGION }}"
 
       - name: Terraform Plan
         run: |
