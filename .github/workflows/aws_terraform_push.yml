@@ -15,6 +15,7 @@ on:
 
 env:
   ENVIRONMENT: ${{ inputs.environment }}
+  AWS_REGION: eu-west-1
 
 jobs:
   deploy:
@@ -52,15 +53,13 @@ jobs:
           terraform init \
             -backend-config="bucket=${{ vars.TF_S3_BACKEND_BUCKET_NAME }}" \
             -backend-config="key=${{ inputs.environment }}/terraform.tfstate" \
-            -backend-config="region=${{ vars.AWS_REGION }}"
+            -backend-config="region=${{ env.AWS_REGION }}"
 
       - name: Terraform Plan
         run: |
           terraform plan \
             -var-file="${{ inputs.environment }}.tfvars" \
             -out=tfplan
-
-
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
