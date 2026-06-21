@@ -9,7 +9,7 @@ on:
 
 env:
   AWS_REGION: eu-west-1
-  ECR_REPOSITORY: ecr_repository_gatus
+  ECR_REPOSITORY: ecs-gatus-dev
 
 permissions:
   id-token: write
