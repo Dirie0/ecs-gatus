@@ -2,7 +2,7 @@ name: aws_terraform_push
 
 on:
   workflow_run:
-    workflows: ["aws_ecr_push"]
+    workflows: ["Deploy to Amazon ECS"]
     types: [completed]
     branches: [main]
 

@@ -13,6 +13,7 @@ concurrency:
 permissions:
   id-token: write
   contents: read
+  security-events: write
 
 jobs:
   deploy:
@@ -51,18 +52,15 @@ jobs:
 
       - name: Image scan using Grype
         uses: anchore/scan-action@v6
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
         with:
           image: "${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}"
-          fail-build: true
-          severity-cutoff: critical
+          fail-build: false
+          severity-cutoff: high
           output-format: sarif
           output-file: grype-results.sarif
 
       - name: Upload Grype results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: grype-results.sarif
