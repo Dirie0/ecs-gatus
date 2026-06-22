@@ -1,0 +1,71 @@
+name: Post Terraform Deployment Check
+
+on:
+  workflow_run:
+    workflows: ["Deploy AWS ECS with Terraform"]
+    types: [completed]
+    branches: [main]
+
+on: 
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The environment to deploy to"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  ENVIRONMENT: ${{ inputs.environment }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  URL_TO_CHECK: ${{ secrets.URL_TO_CHECK }}
+
+jobs:
+  post_deploy_check:
+    name: Post Deployment Check
+    runs-on: ubuntu-latest
+  
+  permissions:
+      id-token: write
+      contents: read
+      issues: write
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # - name: URL Check
+      #   run: |
+      #     echo "Checking URL: $URL_TO_CHECK"
+      #     response=$(curl -s -o /dev/null -w "%{http_code}" $URL_TO_CHECK)
+      #     if [ "$response" -ne 200 ]; then
+      #       echo "Deployment check failed. URL returned status code: $response"
+      #       exit 1
+      #     else
+      #       echo "Deployment check passed. URL is accessible."
+      #     fi
+
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.7.6
+      -name: Terraform Destroy
+        run: |
+          terraform init -backend-config="environments/${{ inputs.environment }}/terraform.tfvars"
+          terraform destroy -auto-approve -var-file="environments/${{ inputs.environment }}/terraform.tfvars"
+

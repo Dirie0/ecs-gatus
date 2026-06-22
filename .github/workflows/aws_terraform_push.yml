@@ -1,4 +1,4 @@
-name: aws_terraform_push
+name: Deploy AWS ECS with Terraform
 
 on:
   workflow_run:
@@ -18,20 +18,6 @@ on:
           - staging
           - prod
 
-name: Deploy Terraform
-
-on: 
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "The environment to deploy to"
-        required: true
-        default: dev
-        type: choice
-        options:
-          - dev
-          - staging
-          - prod
 
 env:
   ENVIRONMENT: ${{ inputs.environment }}
