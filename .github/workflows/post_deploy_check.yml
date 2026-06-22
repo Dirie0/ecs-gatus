@@ -6,7 +6,6 @@ on:
     types: [completed]
     branches: [main]
 
-on: 
   workflow_dispatch:
     inputs:
       environment:
@@ -25,7 +24,7 @@ env:
   URL_TO_CHECK: ${{ secrets.URL_TO_CHECK }}
 
 jobs:
-  post_deploy_check:
+  deploy:
     name: Post Deployment Check
     runs-on: ubuntu-latest
   

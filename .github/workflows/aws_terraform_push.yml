@@ -25,7 +25,7 @@ env:
 
 jobs:
   deploy:
-    name: Deploy
+    name: Deploy AWS ECS with Terraform
     runs-on: ubuntu-latest
 
     environment: ${{ inputs.environment }}
