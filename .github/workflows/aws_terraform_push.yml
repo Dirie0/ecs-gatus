@@ -1,3 +1,23 @@
+name: aws_terraform_push
+
+on:
+  workflow_run:
+    workflows: ["aws_ecr_push"]
+    types: [completed]
+    branches: [main]
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
 name: Deploy Terraform
 
 on: 

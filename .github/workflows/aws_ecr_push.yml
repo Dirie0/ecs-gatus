@@ -1,50 +1,77 @@
-name: Deploy to Amazon ECS
-
+name: aws_ecr_push
 
 on:
- workflow_dispatch:
- push:
-   branches:
-     - main
-
-env:
-  AWS_REGION: eu-west-1
-  ECR_REPOSITORY: ecs-gatus-dev
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: false
+        default: dev
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
 
 permissions:
   id-token: write
   contents: read
+  security-events: write
 
 jobs:
-  deploy:
-    name: Deploy
+  build-and-push:
     runs-on: ubuntu-latest
-    environment: dev
+    environment: ${{ inputs.environment }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Debug GitHub Context
-        run: |
-          echo "Repository: ${{ github.repository }}"
-          echo "Ref: ${{ github.ref }}"
-      - name: Configure AWS Credentials
+
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Set image variables
+        id: vars
+        run: |
+          echo "registry=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_OUTPUT
+          echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build Docker Image
         run: |
           cd gatus
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          docker build -t ${{ steps.vars.outputs.image }} .
+
+      - name: Scan Image (Grype)
+        uses: anchore/scan-action@v6
+        with:
+          image: ${{ steps.vars.outputs.image }}
+          fail-build: true
+          severity-cutoff: critical
+          output-format: sarif
+          output-file: grype-results.sarif
+
+      - name: Upload Scan Results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: grype-results.sarif
+
+      - name: Push Docker Image
+        run: |
+          docker push ${{ steps.vars.outputs.image }}
+
+      - name: Job Summary
+        run: |
+          echo "## ECR Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Repo: ${{ secrets.ECR_REPOSITORY }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Image: ${{ steps.vars.outputs.image }}" >> $GITHUB_STEP_SUMMARY
