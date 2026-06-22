@@ -1,6 +1,5 @@
 name: Deploy to Amazon ECS
 
-
 on:
   push:
     branches: [main]
@@ -10,10 +9,6 @@ on:
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
-
-env:
-  AWS_REGION: eu-west-1
-  ECR_REPOSITORY: ecs-gatus-dev
 
 permissions:
   id-token: write
@@ -28,36 +23,39 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Debug GitHub Context
         run: |
           echo "Repository: ${{ github.repository }}"
           echo "Ref: ${{ github.ref }}"
-      - name: Configure AWS Credentials
+
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build docker image 
+      - name: Build Docker image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           cd gatus
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        
+          docker build -t $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG .
+          echo "image=$ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
       - name: Image scan using Grype
         uses: anchore/scan-action@v6
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         with:
-          image: "${{env.ECR_REGISTRY}}/${{env.ECR_REPOSITORY}}:${{env.IMAGE_TAG}}"
+          image: "${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}"
           fail-build: true
           severity-cutoff: critical
           output-format: sarif
@@ -69,12 +67,10 @@ jobs:
         with:
           sarif_file: grype-results.sarif
 
-      - name: Push docker image to Amazon ECR
-        id: push-image
+      - name: Push Docker image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
-        run:
+        run: |
           cd gatus
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          docker push $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
