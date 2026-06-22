@@ -20,7 +20,6 @@ on:
 
 env:
   ENVIRONMENT: ${{ inputs.environment }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
   URL_TO_CHECK: ${{ secrets.URL_TO_CHECK }}
 
 permissions:
@@ -41,22 +40,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # - name: URL Check
-      #   run: |
-      #     echo "Checking URL: $URL_TO_CHECK"
-      #     response=$(curl -s -o /dev/null -w "%{http_code}" $URL_TO_CHECK)
-      #     if [ "$response" -ne 200 ]; then
-      #       echo "Deployment check failed. URL returned status code: $response"
-      #       exit 1
-      #     else
-      #       echo "Deployment check passed. URL is accessible."
-      #     fi
-
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terraform Setup
         uses: hashicorp/setup-terraform@v2
@@ -65,5 +53,5 @@ jobs:
 
       - name: Terraform Destroy
         run: |
-          terraform init -backend-config="environments/${{ inputs.environment }}/terraform.tfvars"
-          terraform destroy -auto-approve -var-file="environments/${{ inputs.environment }}/terraform.tfvars"
+          terraform init -backend-config="environments/dev/terraform.tfvars"
+          terraform destroy -auto-approve -var-file="environments/dev/terraform.tfvars"
