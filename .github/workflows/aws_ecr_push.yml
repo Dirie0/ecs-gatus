@@ -1,77 +1,80 @@
-name: aws_ecr_push
+name: Deploy to Amazon ECS
+
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Deployment environment"
-        required: false
-        default: dev
-        type: choice
-        options:
-          - dev
-          - staging
-          - prod
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REPOSITORY: ecs-gatus-dev
 
 permissions:
   id-token: write
   contents: read
-  security-events: write
 
 jobs:
-  build-and-push:
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: dev
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials (OIDC)
+      - name: Debug GitHub Context
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Set image variables
-        id: vars
-        run: |
-          echo "registry=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_OUTPUT
-          echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}" >> $GITHUB_OUTPUT
-
-      - name: Build Docker Image
+      - name: Build docker image 
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           cd gatus
-          docker build -t ${{ steps.vars.outputs.image }} .
-
-      - name: Scan Image (Grype)
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        
+      - name: Image scan using Grype
         uses: anchore/scan-action@v6
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         with:
-          image: ${{ steps.vars.outputs.image }}
+          image: "ECR_REGISTRY/${{ECR_REPOSITORY }}:$IMAGE_TAG"
           fail-build: true
           severity-cutoff: critical
           output-format: sarif
           output-file: grype-results.sarif
 
-      - name: Upload Scan Results
-        if: always()
+      - name: Upload Grype results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
+        if: always()
         with:
           sarif_file: grype-results.sarif
 
-      - name: Push Docker Image
-        run: |
-          docker push ${{ steps.vars.outputs.image }}
-
-      - name: Job Summary
-        run: |
-          echo "## ECR Build Complete" >> $GITHUB_STEP_SUMMARY
-          echo "- Repo: ${{ secrets.ECR_REPOSITORY }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Image: ${{ steps.vars.outputs.image }}" >> $GITHUB_STEP_SUMMARY
+      - name: Push docker image to Amazon ECR
+        id: push-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run:
+          cd gatus
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
