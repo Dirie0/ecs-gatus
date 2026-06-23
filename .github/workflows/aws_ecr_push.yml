@@ -1,10 +1,22 @@
-name: Deploy to Amazon ECS
+name: Deploy to AWS ECR
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
 
 concurrency:
   group: build-${{ github.ref }}
@@ -15,20 +27,20 @@ permissions:
   contents: read
   security-events: write
 
+env:
+  ENVIRONMENT: ${{ inputs.environment }}
+
+
 jobs:
   deploy:
-    name: Deploy
+    name: Deploy to AWS ECR
     runs-on: ubuntu-latest
-    environment: dev
+    environment: ${{ inputs.environment }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Debug GitHub Context
-        run: |
-          echo "Repository: ${{ github.repository }}"
-          echo "Ref: ${{ github.ref }}"
 
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4

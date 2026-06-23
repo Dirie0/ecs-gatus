@@ -18,22 +18,24 @@ on:
           - staging
           - prod
 
+concurrency:
+  group: build=${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+    id-token: write
+    contents: read
+    issues: write
 
 env:
   ENVIRONMENT: ${{ inputs.environment }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
 
+    
 jobs:
   deploy:
     name: Deploy AWS ECS with Terraform
     runs-on: ubuntu-latest
-
     environment: ${{ inputs.environment }}
-
-    permissions:
-      id-token: write
-      contents: read
-      issues: write
 
     defaults:
       run:
@@ -43,16 +45,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Terraform Setup
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.8.5
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
 
       - name: Terraform Init
         run: |

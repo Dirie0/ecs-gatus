@@ -17,24 +17,28 @@ on:
           - dev
           - staging
           - prod
+concurrency:
+  group: build=${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+    id-token: write
+    contents: read
+    issues: write
 
 env:
   ENVIRONMENT: ${{ inputs.environment }}
-  URL_TO_CHECK: ${{ secrets.URL_TO_CHECK }}
-  AWS_REGION: eu-west-1
 
 
 jobs:
   deploy:
-    name: Post Deployment Check
+    name: Post Terraform Deployment Check
     runs-on: ubuntu-latest
-  permissions:
-    id-token: write
-    contents: read
-    issues: write
-  defaults:
-    run:
-      working-directory: terraform
+    enviroment: ${{ inputs.environment }}
+
+    defaults:
+      run:
+        working-directory: terraform
 
     steps:
       - name: Checkout
@@ -44,14 +48,14 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
-          aws-region: eu-west-1
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terraform Setup
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.7.6
+          terraform_version: 1.8.5
 
       - name: Terraform Destroy
         run: |
-          terraform init -backend-config="environments/dev/terraform.tfvars"
-          terraform destroy -auto-approve -var-file="environments/dev/terraform.tfvars"
+          terraform init -backend-config="environments/${{ inputs.environment }}/terraform.tfvars"
+          terraform destroy -auto-approve -var-file="environments/${{ inputs.environment }}/terraform.tfvars"
