@@ -5,7 +5,6 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  
   workflow_dispatch:
     inputs:
       environment:
@@ -27,20 +26,46 @@ permissions:
   contents: read
   security-events: write
 
-env:
-  ENVIRONMENT: ${{ inputs.environment }}
-
-
 jobs:
+  build-and-scan:
+    name: Build and Scan
+    runs-on: ubuntu-latest
+    # Runs on push and PR — no environment needed, no secrets needed yet
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        id: build-image
+        run: |
+          cd gatus
+          docker build -t gatus:${{ github.sha }} .
+
+      - name: Image scan using Grype
+        uses: anchore/scan-action@v6
+        with:
+          image: "gatus:${{ github.sha }}"
+          fail-build: false
+          severity-cutoff: high
+          output-format: sarif
+          output-file: grype-results.sarif
+
+      - name: Upload Grype results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: grype-results.sarif
+
   deploy:
     name: Deploy to AWS ECR
     runs-on: ubuntu-latest
+    # Only runs on manual dispatch — environment is always explicitly chosen
+    if: github.event_name == 'workflow_dispatch'
     environment: ${{ inputs.environment }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
 
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
