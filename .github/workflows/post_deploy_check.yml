@@ -23,16 +23,15 @@ env:
   URL_TO_CHECK: ${{ secrets.URL_TO_CHECK }}
   AWS_REGION: eu-west-1
 
-permissions:
-  id-token: write
-  contents: read
-  issues: write
 
 jobs:
   deploy:
     name: Post Deployment Check
     runs-on: ubuntu-latest
-
+  permissions:
+    id-token: write
+    contents: read
+    issues: write
     defaults:
       run:
         working-directory: terraform
