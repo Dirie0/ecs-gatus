@@ -1,10 +1,11 @@
 # Build stage
-FROM golang:alpine AS builder
+FROM golang:1.24-alpine AS builder
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY . ./
 RUN go mod tidy -diff
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o executable .
+
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Production stage
@@ -18,8 +19,5 @@ ENV GATUS_CONFIG_PATH=""
 ENV GATUS_LOG_LEVEL="INFO"
 ENV PORT="8080"
 EXPOSE 8080
-
 USER appuser:appgroup
 ENTRYPOINT ["/executable"]
-
-
