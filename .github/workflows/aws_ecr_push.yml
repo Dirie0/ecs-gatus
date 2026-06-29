@@ -1,10 +1,15 @@
-name: Deploy to AWS ECR
+name: Deploy to Amazon ECS
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_run:
+    workflows: ["Deploy to Amazon ECS"]
+    types: [completed]
+    branches: [main]
+
   workflow_dispatch:
     inputs:
       environment:
@@ -18,54 +23,39 @@ on:
           - prod
 
 concurrency:
+  group: build=${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+    id-token: write
+    contents: read
+    issues: write
+
+env:
+  ENVIRONMENT: ${{ inputs.environment }}
+
+concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   id-token: write
   contents: read
-  security-events: write
 
 jobs:
-  build-and-scan:
-    name: Build and Scan
-    runs-on: ubuntu-latest
-    # Runs on push and PR — no environment needed, no secrets needed yet
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Build Docker image
-        id: build-image
-        run: |
-          cd gatus
-          docker build -t gatus:${{ github.sha }} .
-
-      - name: Image scan using Grype
-        uses: anchore/scan-action@v6
-        with:
-          image: "gatus:${{ github.sha }}"
-          fail-build: false
-          severity-cutoff: high
-          output-format: sarif
-          output-file: grype-results.sarif
-
-      - name: Upload Grype results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: grype-results.sarif
-
   deploy:
-    name: Deploy to AWS ECR
+    name: Deploy
     runs-on: ubuntu-latest
-    # Only runs on manual dispatch — environment is always explicitly chosen
-    if: github.event_name == 'workflow_dispatch'
-    environment: ${{ inputs.environment }}
+    environment: dev
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Debug GitHub Context
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
 
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -89,15 +79,18 @@ jobs:
 
       - name: Image scan using Grype
         uses: anchore/scan-action@v6
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         with:
           image: "${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}"
-          fail-build: false
-          severity-cutoff: high
+          fail-build: true
+          severity-cutoff: critical
           output-format: sarif
           output-file: grype-results.sarif
 
       - name: Upload Grype results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: grype-results.sarif
