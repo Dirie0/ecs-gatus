@@ -8,7 +8,7 @@ on:
       - completed
 
 concurrency:
-  group: terraform-deploy-${{ github.ref }}
+  group: terraform-deploy-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 permissions:
