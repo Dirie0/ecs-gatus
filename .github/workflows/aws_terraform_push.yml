@@ -1,74 +1,61 @@
 name: Deploy AWS ECS with Terraform
 
-on:
-  workflow_run:
-    workflows: ["Deploy to Amazon ECS"]
-    types: [completed]
-    branches: [main]
 
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Environment to deploy to"
-        required: true
-        default: dev
-        type: choice
-        options:
-          - dev
-          - staging
-          - prod
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - dev
 
 concurrency:
-  group: build=${{ github.ref }}
+  group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-    id-token: write
-    contents: read
-    issues: write
+  id-token: write
+  contents: read
+  security-events: write  
 
-env:
-  ENVIRONMENT: ${{ inputs.environment }}
 
-    
 jobs:
   deploy:
     name: Deploy AWS ECS with Terraform
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      contains(fromJSON('["main","staging","dev"]'), github.event.workflow_run.head_branch)
+    environment: >-
+      ${{ github.event.workflow_run.head_branch == 'main' && 'production' ||
+          github.event.workflow_run.head_branch == 'staging' && 'staging' ||
+          'dev' }}
+    env:
+      TF_ENV: >-
+        ${{ github.event.workflow_run.head_branch == 'main' && 'production' ||
+            github.event.workflow_run.head_branch == 'staging' && 'staging' ||
+            'dev' }}
 
     defaults:
       run:
-        working-directory: terraform
+        working-directory: ./terraform
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
-      
-      - name: Terraform Setup
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.8.5
+
+      - uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ secrets.TF_S3_BACKEND_BUCKET_NAME }}" \
-            -backend-config="key=${{ inputs.environment }}/terraform.tfstate" \
-            -backend-config="region=${{ secrets.AWS_REGION }}"
+        run: terraform init -backend-config="env/${{ env.TF_ENV }}.backend.tfvars"
 
       - name: Terraform Plan
-        run: |
-          terraform plan \
-            -var-file="environments/${{ inputs.environment }}/terraform.tfvars" \
-            -out=tfplan
+        run: terraform plan -var-file="env/${{ env.TF_ENV }}.tfvars" -out=tfplan
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan

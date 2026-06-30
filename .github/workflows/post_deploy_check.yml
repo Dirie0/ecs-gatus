@@ -1,40 +1,27 @@
 name: Post Terraform Deployment Check
 
 on:
-  workflow_run:
-    workflows: ["Deploy AWS ECS with Terraform"]
-    types: [completed]
-    branches: [main]
+  push:
+    branches:
+      - main
+      - staging
+      - dev
 
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "The environment to deploy to"
-        required: true
-        default: dev
-        type: choice
-        options:
-          - dev
-          - staging
-          - prod
 concurrency:
-  group: build=${{ github.ref }}
+  group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-    id-token: write
-    contents: read
-    issues: write
-
-env:
-  ENVIRONMENT: ${{ inputs.environment }}
+  id-token: write
+  contents: read
+  security-events: write  
 
 
 jobs:
   deploy:
     name: Post Terraform Deployment Check
     runs-on: ubuntu-latest
-    enviroment: ${{ inputs.environment }}
+    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || github.ref_name == 'dev' && 'dev' }}
 
     defaults:
       run:
@@ -57,5 +44,5 @@ jobs:
 
       - name: Terraform Destroy
         run: |
-          terraform init -backend-config="environments/${{ inputs.environment }}/terraform.tfvars"
-          terraform destroy -auto-approve -var-file="environments/${{ inputs.environment }}/terraform.tfvars"
+          terraform init -backend-config="environments/${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || github.ref_name == 'dev' && 'dev' }}/terraform.tfvars"
+          terraform destroy -auto-approve -var-file="environments/${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || github.ref_name == 'dev' && 'dev' }}/terraform.tfvars"
