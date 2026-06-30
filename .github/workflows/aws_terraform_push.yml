@@ -35,6 +35,7 @@ jobs:
             github.event.workflow_run.head_branch == 'staging' && 'staging' ||
             'dev' }}
 
+
     defaults:
       run:
         working-directory: ./terraform
