@@ -3,6 +3,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY . ./
 RUN go get golang.org/x/crypto@v0.52.0
+RUN go get golang.org/x/net@v0.55.0
 RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o executable .
 
