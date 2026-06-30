@@ -1,14 +1,16 @@
 name: Post Terraform Deployment Check
 
 on:
-  workflow_run:
-    workflows: ["Deploy AWS ECS with Terraform"]
-    types:
-      - completed
+  workflow_dispatch:
+    inputs:
+      terraform_destroy:
+        description: 'Type "DESTROY" to confirm. Infrastruture will be deleted & cannot be undone.'
+        required: true
+
 
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: terraform-destroy-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:

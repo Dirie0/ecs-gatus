@@ -10,7 +10,7 @@ on:
 
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: ecr-deploy-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
