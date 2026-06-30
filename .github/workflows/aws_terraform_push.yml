@@ -1,3 +1,4 @@
+# .github/workflows/terraform-deploy.yml
 name: Deploy AWS ECS with Terraform
 
 
@@ -8,7 +9,7 @@ on:
       - completed
 
 concurrency:
-  group: terraform-deploy
+  group: terraform-deploy-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 permissions:
