@@ -1,30 +1,28 @@
-# .github/workflows/terraform-deploy.yml
-name: Deploy AWS ECS with Terraform
-
+name: CD - Deploy to ECS
 
 on:
   workflow_run:
-    workflows: ["Deployment"]
-    types:
-      - completed
+    workflows: ["CI - Build & Push"]
+    types: [completed]
+    branches:
+      - main
+      - staging
+      - dev
+
+  workflow_dispatch:
 
 concurrency:
-  group: terraform-deploy-${{ github.event.workflow_run.head_branch }}
+  group: deploy-production
   cancel-in-progress: true
 
 permissions:
   id-token: write
   contents: read
-  security-events: write  
-
-
 jobs:
   deploy:
-    name: Deploy AWS ECS with Terraform
+    name: Deploy to ECS
     runs-on: ubuntu-latest
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      contains(fromJSON('["main","staging","dev"]'), github.event.workflow_run.head_branch)
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     environment: >-
       ${{ github.event.workflow_run.head_branch == 'main' && 'production' ||
           github.event.workflow_run.head_branch == 'staging' && 'staging' ||

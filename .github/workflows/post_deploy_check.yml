@@ -20,11 +20,24 @@ permissions:
   security-events: write  
 
 
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      terraform_destroy:
+        description: 'Type "DESTROY" to confirm. Infrastruture will be deleted & cannot be undone.'
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
-  deploy:
-    name: Post Terraform Deployment Check
+  destroy:
+    if: ${{ github.event.inputs.terraform_destroy == 'DESTROY' }}
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || github.ref_name == 'dev' && 'dev' }}
+        environment: ${{ github.ref_name == 'main' && 'production' || github.ref_name == 'staging' && 'staging' || github.ref_name == 'dev' && 'dev' }}
 
     defaults:
       run:

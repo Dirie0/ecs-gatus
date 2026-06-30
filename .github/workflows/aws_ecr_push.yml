@@ -1,5 +1,4 @@
-# .github/workflows/deploy.yml
-name: Deployment
+name: CI - Build & Push
 
 on:
   push:
@@ -8,15 +7,18 @@ on:
       - staging
       - dev
 
-
-concurrency:
-  group: ecr-deploy-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   id-token: write
   contents: read
   security-events: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-scan-push:
