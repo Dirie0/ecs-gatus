@@ -1,9 +1,9 @@
-# Build stage
-FROM golang:1.26-alpine AS builder
+FROM golang:1.24-alpine AS builder
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY . ./
-RUN go mod edit -exclude=golang.org/x/crypto@v0.51.0
+RUN go get golang.org/x/crypto@v0.52.0
+RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o executable .
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
