@@ -1,11 +1,10 @@
 name: Post Terraform Deployment Check
 
 on:
-  push:
-    branches:
-      - main
-      - staging
-      - dev
+  workflow_run:
+    workflows: ["Deploy AWS ECS with Terraform"]
+    types:
+      - completed
 
 
 concurrency:

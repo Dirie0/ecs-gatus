@@ -2,11 +2,10 @@ name: Deploy AWS ECS with Terraform
 
 
 on:
-  push:
-    branches:
-      - main
-      - staging
-      - dev
+  workflow_run:
+    workflows: ["Deployment"]
+    types:
+      - completed
 
 concurrency:
   group: deploy-${{ github.ref }}
